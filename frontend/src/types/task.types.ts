@@ -5,14 +5,14 @@ export interface Task {
   title: string;
   description: string | null;
   status: TaskStatus;
-  deadline: string | null; // ISO date string e.g. "2025-12-31"
+  deadline: string; 
 }
 
 export interface TaskPayload {
   title: string;
   description: string | null;
   status: TaskStatus;
-  deadline: string | null;
+  deadline: string;
 }
 
 export interface GetTasksParams {
@@ -34,7 +34,6 @@ export interface TaskListResult {
   meta: PaginationMeta;
 }
 
-/** Backend response envelope for task list */
 export interface TaskListResponse {
   success: boolean;
   message: string;
@@ -47,7 +46,6 @@ export interface TaskListResponse {
   };
 }
 
-/** Backend response envelope for single task */
 export interface TaskDetailResponse {
   success: boolean;
   message: string;

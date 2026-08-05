@@ -10,6 +10,14 @@ interface TaskModalProps {
   serverError?: string;
 }
 
+function getTodayString(): string {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 interface FormState {
   title: string;
   description: string;
@@ -29,6 +37,7 @@ export default function TaskModal({ open, onClose, onSubmit, initialData, submit
   const [error, setError] = useState("");
 
   const isEdit = Boolean(initialData?.id);
+  const todayStr = getTodayString();
 
   useEffect(() => {
     if (open) {
@@ -48,7 +57,6 @@ export default function TaskModal({ open, onClose, onSubmit, initialData, submit
     }
   }, [open, initialData]);
 
-  // Sync server error from parent into local error state
   useEffect(() => {
     if (serverError) setError(serverError);
   }, [serverError]);
@@ -66,12 +74,16 @@ export default function TaskModal({ open, onClose, onSubmit, initialData, submit
       setError("Judul tugas wajib diisi");
       return;
     }
+    if (!form.deadline) {
+      setError("Deadline wajib diisi");
+      return;
+    }
     setError("");
     await onSubmit({
       title: form.title,
       description: form.description || null,
       status: form.status,
-      deadline: form.deadline || null,
+      deadline: form.deadline,
     });
   }
 
@@ -130,14 +142,21 @@ export default function TaskModal({ open, onClose, onSubmit, initialData, submit
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-ink/80">Deadline</label>
+              <label className="block text-sm font-medium text-ink/80">
+                Deadline <span className="text-red-500">*</span>
+              </label>
               <input
                 type="date"
                 name="deadline"
                 value={form.deadline}
                 onChange={handleChange}
+                min={isEdit ? undefined : todayStr}
+                required
                 className="mt-1 w-full rounded-lg border border-ink/15 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
               />
+              {!isEdit && (
+                <p className="mt-1 text-xs text-ink/40">Minimal hari ini</p>
+              )}
             </div>
           </div>
 

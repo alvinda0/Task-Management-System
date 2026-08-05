@@ -26,6 +26,27 @@ function formatDate(value: string | null | undefined): string | null {
   return d.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
 }
 
+function getDeadlineUrgency(value: string | null | undefined, status: string): "overdue" | "soon" | "ok" | null {
+  if (!value || status === "done") return null;
+  const deadline = new Date(value);
+  deadline.setHours(0, 0, 0, 0);
+  if (Number.isNaN(deadline.getTime())) return null;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const diffDays = Math.ceil((deadline.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 0) return "overdue";
+  if (diffDays <= 3) return "soon";
+  return "ok";
+}
+
+const DEADLINE_STYLES: Record<"overdue" | "soon" | "ok", string> = {
+  overdue: "text-red-600 font-medium",
+  soon: "text-amber-600 font-medium",
+  ok: "text-ink/40",
+};
+
 export default function Tasks() {
   const { user, logout } = useAuth();
 
@@ -90,7 +111,7 @@ export default function Tasks() {
         title: form.title,
         description: form.description || null,
         status: form.status,
-        deadline: form.deadline || null,
+        deadline: form.deadline,
       };
 
       if (editingTask?.id) {
@@ -265,7 +286,9 @@ export default function Tasks() {
                       <p className="mt-1 line-clamp-2 text-sm text-ink/55">{task.description}</p>
                     )}
                     {formatDate(task.deadline) && (
-                      <p className="mt-1.5 text-xs text-ink/40">
+                      <p className={`mt-1.5 text-xs ${DEADLINE_STYLES[getDeadlineUrgency(task.deadline, task.status) ?? "ok"]}`}>
+                        {getDeadlineUrgency(task.deadline, task.status) === "overdue" && "⚠ "}
+                        {getDeadlineUrgency(task.deadline, task.status) === "soon" && "⏰ "}
                         Deadline: {formatDate(task.deadline)}
                       </p>
                     )}

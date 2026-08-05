@@ -4,12 +4,40 @@ const { getPaginationMetadata } = require("../utils/pagination");
 const VALID_STATUS = ["pending", "in-progress", "done"];
 const ALLOWED_LIMITS = [10, 25, 50, 100];
 
+/**
+ * @param {string|null} deadline
+ * @param {boolean} allowPast
+ */
+function validateDeadline(deadline, allowPast = false) {
+  if (!deadline || !String(deadline).trim()) {
+    throw new Error("Deadline wajib diisi");
+  }
+
+  const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+  if (!ISO_DATE.test(deadline)) {
+    throw new Error("Format deadline tidak valid. Gunakan format YYYY-MM-DD");
+  }
+
+  const date = new Date(deadline);
+  if (Number.isNaN(date.getTime())) {
+    throw new Error("Tanggal deadline tidak valid");
+  }
+
+  if (!allowPast) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (date < today) {
+      throw new Error("Deadline tidak boleh di masa lalu");
+    }
+  }
+}
+
 async function createTask(userId, data) {
   const {
     title,
     description = null,
     status = "pending",
-    deadline = null,
+    deadline,
   } = data;
 
   if (!title || !title.trim()) {
@@ -19,6 +47,8 @@ async function createTask(userId, data) {
   if (!VALID_STATUS.includes(status)) {
     throw new Error("Status tidak valid");
   }
+
+  validateDeadline(deadline, false);
 
   const taskId = await taskRepository.createTask({
     title,
@@ -92,6 +122,8 @@ async function updateTask(id, userId, data) {
   if (!VALID_STATUS.includes(updatedTask.status)) {
     throw new Error("Status tidak valid");
   }
+
+  validateDeadline(updatedTask.deadline, true);
 
   await taskRepository.updateTask(id, userId, updatedTask);
 
