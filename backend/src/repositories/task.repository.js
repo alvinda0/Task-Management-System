@@ -18,6 +18,9 @@ async function createTask(task) {
 async function getTasks(userId, status, page, limit, search) {
   const { offset } = getPagination(page, limit);
 
+  const safeLimit = Number.isInteger(parseInt(limit, 10)) ? parseInt(limit, 10) : 10;
+  const safeOffset = Number.isInteger(parseInt(offset, 10)) ? parseInt(offset, 10) : 0;
+
   let sql = `
     SELECT
       id,
@@ -43,11 +46,9 @@ async function getTasks(userId, status, page, limit, search) {
 
   sql += `
     ORDER BY id DESC
-    LIMIT ?
-    OFFSET ?
+    LIMIT ${safeLimit}
+    OFFSET ${safeOffset}
   `;
-
-  params.push(parseInt(limit, 10), parseInt(offset, 10));
 
   const [rows] = await db.execute(sql, params);
 
