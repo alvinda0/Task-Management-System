@@ -6,22 +6,18 @@ const userRepository = require("../repositories/user.repository");
 async function register(data) {
   const { name, email, password } = data;
 
-  // Validasi sederhana
   if (!name || !email || !password) {
     throw new Error("Name, email, dan password wajib diisi");
   }
 
-  // Cek email sudah digunakan
   const existingUser = await userRepository.findByEmail(email);
 
   if (existingUser) {
     throw new Error("Email sudah terdaftar");
   }
 
-  // Hash password
   const hashedPassword = await bcrypt.hash(password, 10);
 
-  // Simpan user
   const userId = await userRepository.createUser({
     name,
     email,
@@ -53,16 +49,16 @@ async function login(data) {
   if (!isMatch) {
     throw new Error("Email atau password salah");
   }
-  
-  const token = jwt.sign(
-  { id: user.id },
-  process.env.JWT_SECRET,
-  {
-    expiresIn: process.env.JWT_EXPIRES_IN,
-  }
-);
 
-  return token;
+  return jwt.sign(
+    {
+      id: user.id,
+    },
+    process.env.JWT_SECRET,
+    {
+      expiresIn: process.env.JWT_EXPIRES_IN,
+    }
+  );
 }
 
 module.exports = {
