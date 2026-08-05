@@ -4,6 +4,20 @@ Aplikasi manajemen tugas berbasis web yang memungkinkan pengguna untuk mendaftar
 
 ---
 
+## Screenshots
+
+### Desktop
+
+| Login | Register | Daftar Tugas |
+|-------|----------|--------------|
+| ![Login](.github/assets/login.jpeg) | ![Register](.github/assets/register.jpeg) | ![Tasks](.github/assets/tasks.jpeg) |
+
+### Mobile
+
+![Tasks Mobile](.github/assets/taks-mobile.jpeg)
+
+---
+
 ## Struktur Proyek
 
 ```
@@ -71,7 +85,7 @@ npm run dev
 npm start
 ```
 
-Server berjalan di `http://localhost:5000` (atau port yang diset di `.env`).
+Server berjalan di `http://localhost:3000` (atau port yang diset di `.env`).
 
 ---
 
@@ -92,7 +106,7 @@ cp frontend/.env frontend/.env.local
 Pastikan URL backend sudah benar di `frontend/.env`:
 
 ```env
-VITE_API_URL=http://localhost:5000/api
+VITE_API_URL=http://localhost:3000/api
 ```
 
 ### 2. Install Dependensi

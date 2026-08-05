@@ -179,16 +179,16 @@ export default function Tasks() {
   }
 
   return (
-    <div className="min-h-screen bg-paper">
-      <header className="border-b border-ink/10 bg-white">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-4 sm:px-6">
+    <div className="flex h-screen flex-col bg-paper">
+      <header className="shrink-0 border-b border-ink/10 bg-white">
+        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
           <div className="flex items-center gap-2.5">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand text-sm font-bold text-white">
               T
             </div>
             <span className="font-display text-lg font-semibold text-ink">Tugasin</span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <span className="hidden text-sm text-ink/60 sm:inline">
               {user?.name || user?.email}
             </span>
@@ -202,49 +202,52 @@ export default function Tasks() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <main className="mx-auto flex min-h-0 w-full max-w-4xl flex-1 flex-col px-4 py-5 sm:px-6 sm:py-8 overflow-hidden">
+        {/* Title + CTA */}
+        <div className="shrink-0 flex items-center justify-between gap-3">
           <div>
             <h1 className="font-display text-xl font-bold text-ink">Daftar Tugas</h1>
             <p className="mt-0.5 text-sm text-ink/50">
-              {meta.total} tugas{" "}
-              {filter !== "all" ? `· ${FILTERS.find((f) => f.value === filter)?.label}` : ""}
+              {meta.total} tugas{filter !== "all" ? ` · ${FILTERS.find((f) => f.value === filter)?.label}` : ""}
             </p>
           </div>
           <button
             onClick={openCreateModal}
-            className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark"
+            className="shrink-0 inline-flex items-center justify-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark"
           >
             + Tugas Baru
           </button>
         </div>
 
-        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-wrap gap-1.5">
-            {FILTERS.map((f) => (
-              <button
-                key={f.value}
-                onClick={() => setFilter(f.value)}
-                className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
-                  filter === f.value
-                    ? "bg-ink text-white"
-                    : "bg-white text-ink/60 ring-1 ring-inset ring-ink/10 hover:bg-ink/5"
-                }`}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
+        {/* Filter pills */}
+        <div className="mt-4 shrink-0 flex gap-1.5 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          {FILTERS.map((f) => (
+            <button
+              key={f.value}
+              onClick={() => setFilter(f.value)}
+              className={`shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium transition ${
+                filter === f.value
+                  ? "bg-ink text-white"
+                  : "bg-white text-ink/60 ring-1 ring-inset ring-ink/10 hover:bg-ink/5"
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Search */}
+        <div className="mt-3 shrink-0">
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Cari judul tugas..."
-            className="w-full rounded-lg border border-ink/15 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20 sm:w-64"
+            className="w-full rounded-lg border border-ink/15 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
           />
         </div>
 
         {error && (
-          <div className="mt-4 flex items-start justify-between gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 ring-1 ring-red-600/20">
+          <div className="mt-3 shrink-0 flex items-start justify-between gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 ring-1 ring-red-600/20">
             <span>{error}</span>
             <button
               onClick={() => setError("")}
@@ -256,18 +259,19 @@ export default function Tasks() {
           </div>
         )}
 
-        <div className="mt-5">
+        {/* Task list */}
+        <div className="mt-4 flex-1 overflow-y-auto min-h-0 pb-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           {loading ? (
             <div className="space-y-3">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="h-20 animate-pulse rounded-xl bg-ink/5" />
+                <div key={i} className="h-24 animate-pulse rounded-xl bg-ink/5" />
               ))}
             </div>
           ) : tasks.length === 0 ? (
             <div className="rounded-xl border border-dashed border-ink/15 bg-white/60 py-14 text-center">
               <p className="font-medium text-ink/70">Belum ada tugas di sini.</p>
               <p className="mt-1 text-sm text-ink/40">
-                Klik "Tugas Baru" untuk mulai menambahkan.
+                Klik "+ Tugas Baru" untuk mulai menambahkan.
               </p>
             </div>
           ) : (
@@ -275,34 +279,43 @@ export default function Tasks() {
               {tasks.map((task) => (
                 <li
                   key={task.id}
-                  className="flex items-start justify-between gap-4 rounded-xl bg-white p-4 shadow-sm ring-1 ring-ink/5"
+                  className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-ink/5"
                 >
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h3 className="truncate font-medium text-ink">{task.title}</h3>
+                  {/* Row 1: title + badge */}
+                  <div className="flex items-start gap-2">
+                    <h3 className="flex-1 font-medium text-ink leading-snug break-words min-w-0">
+                      {task.title}
+                    </h3>
+                    <div className="shrink-0 mt-0.5">
                       <StatusBadge status={task.status} />
                     </div>
-                    {task.description && (
-                      <p className="mt-1 line-clamp-2 text-sm text-ink/55">{task.description}</p>
-                    )}
-                    {formatDate(task.deadline) && (
-                      <p className={`mt-1.5 text-xs ${DEADLINE_STYLES[getDeadlineUrgency(task.deadline, task.status) ?? "ok"]}`}>
-                        {getDeadlineUrgency(task.deadline, task.status) === "overdue" && "⚠ "}
-                        {getDeadlineUrgency(task.deadline, task.status) === "soon" && "⏰ "}
-                        Deadline: {formatDate(task.deadline)}
-                      </p>
-                    )}
                   </div>
-                  <div className="flex shrink-0 gap-1.5">
+
+                  {/* Description */}
+                  {task.description && (
+                    <p className="mt-1.5 line-clamp-2 text-sm text-ink/55">{task.description}</p>
+                  )}
+
+                  {/* Deadline */}
+                  {formatDate(task.deadline) && (
+                    <p className={`mt-1.5 text-xs ${DEADLINE_STYLES[getDeadlineUrgency(task.deadline, task.status) ?? "ok"]}`}>
+                      {getDeadlineUrgency(task.deadline, task.status) === "overdue" && "⚠ "}
+                      {getDeadlineUrgency(task.deadline, task.status) === "soon" && "⏰ "}
+                      Deadline: {formatDate(task.deadline)}
+                    </p>
+                  )}
+
+                  {/* Row 3: actions */}
+                  <div className="mt-3 flex items-center justify-end gap-2 border-t border-ink/5 pt-3">
                     <button
                       onClick={() => openEditModal(task)}
-                      className="rounded-lg px-2.5 py-1.5 text-sm font-medium text-ink/60 hover:bg-ink/5"
+                      className="rounded-lg px-3 py-1.5 text-sm font-medium text-ink/60 ring-1 ring-inset ring-ink/10 hover:bg-ink/5 active:bg-ink/10"
                     >
                       Edit
                     </button>
                     <button
                       onClick={() => setDeleteTarget(task)}
-                      className="rounded-lg px-2.5 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50"
+                      className="rounded-lg px-3 py-1.5 text-sm font-medium text-red-600 ring-1 ring-inset ring-red-600/15 hover:bg-red-50 active:bg-red-100"
                     >
                       Hapus
                     </button>
@@ -315,15 +328,15 @@ export default function Tasks() {
 
         {/* Pagination */}
         {meta.total_pages > 1 && (
-          <div className="mt-6 flex items-center justify-between">
-            <p className="text-sm text-ink/50">
-              Halaman {meta.page} dari {meta.total_pages}
+          <div className="mt-3 shrink-0 flex items-center justify-between gap-2">
+            <p className="text-xs text-ink/50 whitespace-nowrap">
+              Hal. {meta.page}/{meta.total_pages}
             </p>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1">
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page <= 1 || loading}
-                className="rounded-lg px-3 py-1.5 text-sm font-medium text-ink/60 ring-1 ring-inset ring-ink/10 hover:bg-ink/5 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-ink/60 ring-1 ring-inset ring-ink/10 hover:bg-ink/5 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 ← Prev
               </button>
@@ -337,7 +350,7 @@ export default function Tasks() {
                 }, [])
                 .map((item, idx) =>
                   item === "..." ? (
-                    <span key={`ellipsis-${idx}`} className="px-1 text-sm text-ink/40">
+                    <span key={`ellipsis-${idx}`} className="px-1 text-xs text-ink/40">
                       …
                     </span>
                   ) : (
@@ -345,7 +358,7 @@ export default function Tasks() {
                       key={item}
                       onClick={() => setPage(item as number)}
                       disabled={loading}
-                      className={`min-w-[2rem] rounded-lg px-2.5 py-1.5 text-sm font-medium transition disabled:cursor-not-allowed ${
+                      className={`min-w-[2rem] rounded-lg px-2 py-1.5 text-xs font-medium transition disabled:cursor-not-allowed ${
                         page === item
                           ? "bg-ink text-white"
                           : "text-ink/60 ring-1 ring-inset ring-ink/10 hover:bg-ink/5"
@@ -359,7 +372,7 @@ export default function Tasks() {
               <button
                 onClick={() => setPage((p) => Math.min(meta.total_pages, p + 1))}
                 disabled={page >= meta.total_pages || loading}
-                className="rounded-lg px-3 py-1.5 text-sm font-medium text-ink/60 ring-1 ring-inset ring-ink/10 hover:bg-ink/5 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-ink/60 ring-1 ring-inset ring-ink/10 hover:bg-ink/5 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Next →
               </button>
