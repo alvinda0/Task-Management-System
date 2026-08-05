@@ -23,13 +23,15 @@ async function getTasks(req, res, next) {
       status,
       page = 1,
       limit = 10,
+      search = "",
     } = req.query;
 
     const result = await taskService.getTasks(
       req.user.id,
       status,
       Number(page),
-      Number(limit)
+      Number(limit),
+      search
     );
 
     return response.success(
@@ -43,24 +45,7 @@ async function getTasks(req, res, next) {
   }
 }
 
-async function getTaskById(req, res, next) {
-  try {
-    const task = await taskService.getTaskById(
-      req.params.id,
-      req.user.id
-    );
-
-   return response.success(
-    res,
-    "Berhasil mengambil detail task",
-    task
-);
-  } catch (error) {
-    next(error);
-  }
-}
-
-async function updateTask(req, res) {
+async function updateTask(req, res, next) {
   try {
     const task = await taskService.updateTask(
       req.params.id,
@@ -78,7 +63,7 @@ async function updateTask(req, res) {
   }
 }
 
-async function deleteTask(req, res) {
+async function deleteTask(req, res, next) {
   try {
     await taskService.deleteTask(req.params.id, req.user.id);
 
@@ -94,7 +79,6 @@ async function deleteTask(req, res) {
 module.exports = {
   createTask,
   getTasks,
-  getTaskById,
   updateTask,
   deleteTask,
 };

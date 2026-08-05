@@ -37,7 +37,7 @@ async function createTask(userId, data) {
   };
 }
 
-async function getTasks(userId, status, page = 1, limit = 10) {
+async function getTasks(userId, status, page = 1, limit = 10, search = "") {
   page = Number(page);
   limit = Number(limit);
 
@@ -57,7 +57,8 @@ async function getTasks(userId, status, page = 1, limit = 10) {
     userId,
     status,
     page,
-    limit
+    limit,
+    search.trim()
   );
 
   return {
@@ -68,16 +69,6 @@ async function getTasks(userId, status, page = 1, limit = 10) {
       result.metadata.total
     ),
   };
-}
-
-async function getTaskById(id, userId) {
-  const task = await taskRepository.getTaskById(id, userId);
-
-  if (!task) {
-    throw new Error("Task tidak ditemukan");
-  }
-
-  return task;
 }
 
 async function updateTask(id, userId, data) {
@@ -123,7 +114,6 @@ async function deleteTask(id, userId) {
 module.exports = {
   createTask,
   getTasks,
-  getTaskById,
   updateTask,
   deleteTask,
 };

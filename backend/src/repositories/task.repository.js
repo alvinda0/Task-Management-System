@@ -15,7 +15,7 @@ async function createTask(task) {
 }
 
 
-async function getTasks(userId, status, page, limit) {
+async function getTasks(userId, status, page, limit, search) {
   const { offset } = getPagination(page, limit);
 
   let sql = `
@@ -36,6 +36,11 @@ async function getTasks(userId, status, page, limit) {
     params.push(status);
   }
 
+  if (search) {
+    sql += " AND title LIKE ?";
+    params.push(`%${search}%`);
+  }
+
   sql += `
     ORDER BY id DESC
     LIMIT ?
@@ -46,7 +51,12 @@ async function getTasks(userId, status, page, limit) {
 
   const [rows] = await db.execute(sql, params);
 
-  return rows;
+  const total = await countTasks(userId, status, search);
+
+  return {
+    data: rows,
+    metadata: { total },
+  };
 }
 
 async function getTaskById(id, userId) {
@@ -60,7 +70,7 @@ async function getTaskById(id, userId) {
   return rows[0];
 }
 
-async function countTasks(userId, status) {
+async function countTasks(userId, status, search) {
   let sql = `
     SELECT COUNT(*) total
     FROM tasks
@@ -72,6 +82,11 @@ async function countTasks(userId, status) {
   if (status) {
     sql += " AND status = ?";
     params.push(status);
+  }
+
+  if (search) {
+    sql += " AND title LIKE ?";
+    params.push(`%${search}%`);
   }
 
   const [[result]] = await db.execute(sql, params);

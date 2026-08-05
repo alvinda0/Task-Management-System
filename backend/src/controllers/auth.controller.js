@@ -3,6 +3,9 @@ const response = require("../utils/response");
 
 async function register(req, res, next) {
   try {
+    if (!req.body || typeof req.body !== "object") {
+      return response.error(res, "Request body tidak valid", 400);
+    }
     const user = await authService.register(req.body);
 
     return response.success(

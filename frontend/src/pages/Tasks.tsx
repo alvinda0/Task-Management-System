@@ -1,17 +1,25 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import api from "../api/axios.js";
-import { useAuth } from "../context/AuthContext.jsx";
-import StatusBadge from "../components/StatusBadge.jsx";
-import TaskModal from "../components/TaskModal.jsx";
+import { useCallback, useEffect, useState } from "react";
+import { useAuth } from "../context/AuthContext.tsx";
+import { taskService } from "../services/task.service";
+import StatusBadge from "../components/StatusBadge";
+import TaskModal from "../components/TaskModal";
+import type { Task, TaskPayload, TaskStatus, PaginationMeta } from "../types/task.types";
+import type { AxiosError } from "axios";
 
-const FILTERS = [
+type FilterValue = TaskStatus | "all";
+
+interface ApiErrorResponse {
+  message?: string;
+}
+
+const FILTERS: { value: FilterValue; label: string }[] = [
   { value: "all", label: "Semua" },
   { value: "pending", label: "Pending" },
   { value: "in-progress", label: "In Progress" },
   { value: "done", label: "Done" },
 ];
 
-function formatDate(value) {
+function formatDate(value: string | null | undefined): string | null {
   if (!value) return null;
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return null;
@@ -21,57 +29,64 @@ function formatDate(value) {
 export default function Tasks() {
   const { user, logout } = useAuth();
 
-  const [tasks, setTasks] = useState([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [filter, setFilter] = useState("all");
+  const [filter, setFilter] = useState<FilterValue>("all");
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [meta, setMeta] = useState<PaginationMeta>({ page: 1, limit: 10, total: 0, total_pages: 1 });
 
   const [modalOpen, setModalOpen] = useState(false);
-  const [editingTask, setEditingTask] = useState(null);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [modalError, setModalError] = useState("");
 
-  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState<Task | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const fetchTasks = useCallback(async (status) => {
+  const fetchTasks = useCallback(async (status: FilterValue, currentPage: number, searchQuery: string) => {
     setLoading(true);
     setError("");
     try {
-      const params = status && status !== "all" ? { status } : {};
-      const res = await api.get("/tasks", { params });
-      setTasks(res.data?.data || []);
+      const result = await taskService.getTasks({ status, page: currentPage, limit: 10, search: searchQuery });
+      setTasks(result.tasks);
+      setMeta(result.meta);
     } catch (err) {
-      setError(err?.response?.data?.message || "Gagal memuat daftar tugas");
+      const axiosErr = err as AxiosError<ApiErrorResponse>;
+      setError(axiosErr?.response?.data?.message || "Gagal memuat daftar tugas");
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchTasks(filter);
-  }, [filter, fetchTasks]);
+    fetchTasks(filter, page, search);
+  }, [filter, page, search, fetchTasks]);
 
-  const visibleTasks = useMemo(() => {
-    if (!search.trim()) return tasks;
-    const q = search.toLowerCase();
-    return tasks.filter((t) => t.title?.toLowerCase().includes(q));
-  }, [tasks, search]);
+  // Reset ke page 1 saat filter atau search berubah
+  useEffect(() => {
+    setPage(1);
+  }, [filter, search]);
+
 
   function openCreateModal() {
     setEditingTask(null);
+    setModalError("");
     setModalOpen(true);
   }
 
-  function openEditModal(task) {
+  function openEditModal(task: Task) {
     setEditingTask(task);
+    setModalError("");
     setModalOpen(true);
   }
 
-  async function handleSubmitTask(form) {
+  async function handleSubmitTask(form: TaskPayload) {
     setSubmitting(true);
+    setModalError("");
     try {
-      const payload = {
+      const payload: TaskPayload = {
         title: form.title,
         description: form.description || null,
         status: form.status,
@@ -79,21 +94,31 @@ export default function Tasks() {
       };
 
       if (editingTask?.id) {
-        const res = await api.put(`/tasks/${editingTask.id}`, payload);
-        const updated = res.data?.data;
+        const updated = await taskService.updateTask(editingTask.id, payload);
         setTasks((prev) =>
           prev.map((t) => (t.id === editingTask.id ? { ...t, ...(updated || payload) } : t))
         );
       } else {
-        const res = await api.post("/tasks", payload);
-        const created = res.data?.data;
-        if (created) {
-          setTasks((prev) => [created, ...prev]);
-        } else {
-          fetchTasks(filter);
-        }
+        await taskService.createTask(payload);
+        await fetchTasks(filter, page, search);
       }
       setModalOpen(false);
+    } catch (err) {
+      const axiosErr = err as AxiosError<ApiErrorResponse>;
+      const status = axiosErr?.response?.status;
+      const message = axiosErr?.response?.data?.message;
+
+      if (status === 422 || status === 400) {
+        setModalError(message || "Data tugas tidak valid. Periksa kembali isian kamu.");
+      } else if (status === 403) {
+        setModalError("Kamu tidak punya izin untuk mengubah tugas ini.");
+      } else if (status === 500) {
+        setModalError("Terjadi kesalahan server. Coba beberapa saat lagi.");
+      } else if (!axiosErr?.response) {
+        setModalError("Tidak dapat terhubung ke server. Periksa koneksi internetmu.");
+      } else {
+        setModalError(message || (err as Error)?.message || "Gagal menyimpan tugas");
+      }
     } finally {
       setSubmitting(false);
     }
@@ -103,11 +128,30 @@ export default function Tasks() {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      await api.delete(`/tasks/${deleteTarget.id}`);
-      setTasks((prev) => prev.filter((t) => t.id !== deleteTarget.id));
+      await taskService.deleteTask(deleteTarget.id);
       setDeleteTarget(null);
+      // Kalau task yang dihapus adalah satu-satunya di halaman ini,
+      // mundur ke halaman sebelumnya supaya tidak landing di halaman kosong
+      const isLastItemOnPage = tasks.length === 1 && page > 1;
+      const targetPage = isLastItemOnPage ? page - 1 : page;
+      if (isLastItemOnPage) setPage(targetPage);
+      await fetchTasks(filter, targetPage, search);
     } catch (err) {
-      setError(err?.response?.data?.message || "Gagal menghapus tugas");
+      const axiosErr = err as AxiosError<ApiErrorResponse>;
+      const status = axiosErr?.response?.status;
+      const message = axiosErr?.response?.data?.message;
+
+      if (status === 403) {
+        setError("Kamu tidak punya izin untuk menghapus tugas ini.");
+      } else if (status === 404) {
+        setError("Tugas tidak ditemukan. Mungkin sudah dihapus sebelumnya.");
+        setDeleteTarget(null);
+        await fetchTasks(filter, page, search);
+      } else if (!axiosErr?.response) {
+        setError("Tidak dapat terhubung ke server. Periksa koneksi internetmu.");
+      } else {
+        setError(message || "Gagal menghapus tugas");
+      }
     } finally {
       setDeleting(false);
     }
@@ -142,7 +186,8 @@ export default function Tasks() {
           <div>
             <h1 className="font-display text-xl font-bold text-ink">Daftar Tugas</h1>
             <p className="mt-0.5 text-sm text-ink/50">
-              {visibleTasks.length} tugas {filter !== "all" ? `· ${FILTERS.find((f) => f.value === filter)?.label}` : ""}
+              {meta.total} tugas{" "}
+              {filter !== "all" ? `· ${FILTERS.find((f) => f.value === filter)?.label}` : ""}
             </p>
           </div>
           <button
@@ -178,8 +223,15 @@ export default function Tasks() {
         </div>
 
         {error && (
-          <div className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 ring-1 ring-red-600/20">
-            {error}
+          <div className="mt-4 flex items-start justify-between gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 ring-1 ring-red-600/20">
+            <span>{error}</span>
+            <button
+              onClick={() => setError("")}
+              className="shrink-0 text-red-400 hover:text-red-600"
+              aria-label="Tutup pesan error"
+            >
+              ✕
+            </button>
           </div>
         )}
 
@@ -190,7 +242,7 @@ export default function Tasks() {
                 <div key={i} className="h-20 animate-pulse rounded-xl bg-ink/5" />
               ))}
             </div>
-          ) : visibleTasks.length === 0 ? (
+          ) : tasks.length === 0 ? (
             <div className="rounded-xl border border-dashed border-ink/15 bg-white/60 py-14 text-center">
               <p className="font-medium text-ink/70">Belum ada tugas di sini.</p>
               <p className="mt-1 text-sm text-ink/40">
@@ -199,7 +251,7 @@ export default function Tasks() {
             </div>
           ) : (
             <ul className="space-y-3">
-              {visibleTasks.map((task) => (
+              {tasks.map((task) => (
                 <li
                   key={task.id}
                   className="flex items-start justify-between gap-4 rounded-xl bg-white p-4 shadow-sm ring-1 ring-ink/5"
@@ -237,14 +289,69 @@ export default function Tasks() {
             </ul>
           )}
         </div>
+
+        {/* Pagination */}
+        {meta.total_pages > 1 && (
+          <div className="mt-6 flex items-center justify-between">
+            <p className="text-sm text-ink/50">
+              Halaman {meta.page} dari {meta.total_pages}
+            </p>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page <= 1 || loading}
+                className="rounded-lg px-3 py-1.5 text-sm font-medium text-ink/60 ring-1 ring-inset ring-ink/10 hover:bg-ink/5 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                ← Prev
+              </button>
+
+              {Array.from({ length: meta.total_pages }, (_, i) => i + 1)
+                .filter((p) => p === 1 || p === meta.total_pages || Math.abs(p - page) <= 1)
+                .reduce<(number | "...")[]>((acc, p, idx, arr) => {
+                  if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push("...");
+                  acc.push(p);
+                  return acc;
+                }, [])
+                .map((item, idx) =>
+                  item === "..." ? (
+                    <span key={`ellipsis-${idx}`} className="px-1 text-sm text-ink/40">
+                      …
+                    </span>
+                  ) : (
+                    <button
+                      key={item}
+                      onClick={() => setPage(item as number)}
+                      disabled={loading}
+                      className={`min-w-[2rem] rounded-lg px-2.5 py-1.5 text-sm font-medium transition disabled:cursor-not-allowed ${
+                        page === item
+                          ? "bg-ink text-white"
+                          : "text-ink/60 ring-1 ring-inset ring-ink/10 hover:bg-ink/5"
+                      }`}
+                    >
+                      {item}
+                    </button>
+                  )
+                )}
+
+              <button
+                onClick={() => setPage((p) => Math.min(meta.total_pages, p + 1))}
+                disabled={page >= meta.total_pages || loading}
+                className="rounded-lg px-3 py-1.5 text-sm font-medium text-ink/60 ring-1 ring-inset ring-ink/10 hover:bg-ink/5 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Next →
+              </button>
+            </div>
+          </div>
+        )}
       </main>
 
       <TaskModal
         open={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={() => { setModalOpen(false); setModalError(""); }}
         onSubmit={handleSubmitTask}
         initialData={editingTask}
         submitting={submitting}
+        serverError={modalError}
       />
 
       {deleteTarget && (

@@ -1,14 +1,31 @@
 import { useEffect, useState } from "react";
+import type { Task, TaskPayload, TaskStatus } from "../types/task.types";
 
-const EMPTY_FORM = {
+interface TaskModalProps {
+  open: boolean;
+  onClose: () => void;
+  onSubmit: (form: TaskPayload) => Promise<void>;
+  initialData: Task | null;
+  submitting: boolean;
+  serverError?: string;
+}
+
+interface FormState {
+  title: string;
+  description: string;
+  status: TaskStatus;
+  deadline: string;
+}
+
+const EMPTY_FORM: FormState = {
   title: "",
   description: "",
   status: "pending",
   deadline: "",
 };
 
-export default function TaskModal({ open, onClose, onSubmit, initialData, submitting }) {
-  const [form, setForm] = useState(EMPTY_FORM);
+export default function TaskModal({ open, onClose, onSubmit, initialData, submitting, serverError }: TaskModalProps) {
+  const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [error, setError] = useState("");
 
   const isEdit = Boolean(initialData?.id);
@@ -31,25 +48,31 @@ export default function TaskModal({ open, onClose, onSubmit, initialData, submit
     }
   }, [open, initialData]);
 
+  // Sync server error from parent into local error state
+  useEffect(() => {
+    if (serverError) setError(serverError);
+  }, [serverError]);
+
   if (!open) return null;
 
-  function handleChange(e) {
+  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
     const { name, value } = e.target;
     setForm((f) => ({ ...f, [name]: value }));
   }
 
-  async function handleSubmit(e) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!form.title.trim()) {
       setError("Judul tugas wajib diisi");
       return;
     }
     setError("");
-    try {
-      await onSubmit(form);
-    } catch (err) {
-      setError(err?.response?.data?.message || "Gagal menyimpan tugas");
-    }
+    await onSubmit({
+      title: form.title,
+      description: form.description || null,
+      status: form.status,
+      deadline: form.deadline || null,
+    });
   }
 
   return (
@@ -118,7 +141,20 @@ export default function TaskModal({ open, onClose, onSubmit, initialData, submit
             </div>
           </div>
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && (
+            <div className="flex items-start gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 ring-1 ring-red-600/20">
+              <span className="mt-px shrink-0">⚠</span>
+              <span className="flex-1">{error}</span>
+              <button
+                type="button"
+                onClick={() => setError("")}
+                className="shrink-0 text-red-400 hover:text-red-600"
+                aria-label="Tutup pesan error"
+              >
+                ✕
+              </button>
+            </div>
+          )}
 
           <div className="flex justify-end gap-2 pt-2">
             <button
