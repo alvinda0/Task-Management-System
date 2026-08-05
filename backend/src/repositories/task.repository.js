@@ -47,7 +47,7 @@ async function getTasks(userId, status, page, limit, search) {
     OFFSET ?
   `;
 
-  params.push(limit, offset);
+  params.push(parseInt(limit, 10), parseInt(offset, 10));
 
   const [rows] = await db.execute(sql, params);
 

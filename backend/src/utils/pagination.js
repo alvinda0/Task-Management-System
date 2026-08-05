@@ -1,6 +1,6 @@
 function getPagination(page = 1, limit = 10) {
-  const currentPage = Number(page);
-  const currentLimit = Number(limit);
+  const currentPage = parseInt(page, 10);
+  const currentLimit = parseInt(limit, 10);
 
   return {
     limit: currentLimit,
