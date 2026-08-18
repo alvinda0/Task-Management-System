@@ -12,4 +12,7 @@ router.get("/", taskController.getTasks);
 router.put("/:id", taskController.updateTask);
 router.delete("/:id", taskController.deleteTask);
 
+// Endpoint test — trigger pengiriman email deadline secara manual
+router.post("/test-deadline-email", taskController.triggerDeadlineEmail);
+
 module.exports = router;

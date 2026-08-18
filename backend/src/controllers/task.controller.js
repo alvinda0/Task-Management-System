@@ -1,4 +1,5 @@
 const taskService = require("../services/task.service");
+const { checkAndNotifyDeadlines } = require("../schedulers/deadline.scheduler");
 const response = require("../utils/response");
 
 async function createTask(req, res, next) {
@@ -76,9 +77,19 @@ async function deleteTask(req, res, next) {
   }
 }
 
+async function triggerDeadlineEmail(req, res, next) {
+  try {
+    await checkAndNotifyDeadlines();
+    return response.success(res, "Pengecekan deadline selesai, cek console untuk detailnya");
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   createTask,
   getTasks,
   updateTask,
   deleteTask,
+  triggerDeadlineEmail,
 };

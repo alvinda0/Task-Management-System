@@ -124,6 +124,29 @@ async function deleteTask(id, userId) {
   return result.affectedRows;
 }
 
+async function getTasksNearDeadline(daysAhead = 2) {
+  const [rows] = await db.execute(
+    `SELECT
+       t.id,
+       t.title,
+       t.deadline,
+       t.status,
+       u.name  AS user_name,
+       u.email AS user_email,
+       DATEDIFF(t.deadline, CURDATE()) AS days_left
+     FROM tasks t
+     JOIN users u ON u.id = t.user_id
+     WHERE
+       t.status != 'done'
+       AND t.deadline >= CURDATE()
+       AND t.deadline <= DATE_ADD(CURDATE(), INTERVAL ? DAY)
+     ORDER BY t.deadline ASC`,
+    [daysAhead]
+  );
+
+  return rows;
+}
+
 module.exports = {
   createTask,
   getTasks,
@@ -131,4 +154,5 @@ module.exports = {
   updateTask,
   deleteTask,
   countTasks,
+  getTasksNearDeadline,
 };

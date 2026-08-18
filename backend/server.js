@@ -2,6 +2,7 @@ require("dotenv").config();
 
 const app = require("./src/app");
 const pool = require("./src/config/db");
+const { registerDeadlineScheduler } = require("./src/schedulers/deadline.scheduler");
 
 const PORT = process.env.PORT || 3000;
 
@@ -11,6 +12,9 @@ async function startServer() {
     const conn = await pool.getConnection();
     console.log(`✅ Database connected: ${process.env.DB_NAME}@${process.env.DB_HOST}:${process.env.DB_PORT}`);
     conn.release();
+
+    // Daftarkan scheduler pengingat deadline
+    registerDeadlineScheduler();
 
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
